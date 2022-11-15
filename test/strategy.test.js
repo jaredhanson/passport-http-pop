@@ -1,5 +1,6 @@
 var chai = require('chai');
 var Strategy = require('../lib/strategy');
+var jws = require('jws');
 
 
 describe('Strategy', function() {
@@ -16,20 +17,21 @@ describe('Strategy', function() {
   
   it('should authenticate request with valid credentials', function(done) {
     var strategy = new Strategy(function(token, cb) {
-      expect(token).to.equal('123456');
-      return cb(null, { id: '248289761001' }, 'partner-app-client-secret');
+      expect(token).to.equal('2YotnFZFEjr1zCsicMWpAA');
+      return cb(null, { id: '248289761001' }, 'keyboard cat');
     });
     
-    // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdCI6IjEyMzQ1NiIsInRzIjoxMjM0NTY3OH0.Pocf1CzRha25nwCfoZynProYLcV1UE5SlcRGa3qzZXo
+    var credential = jws.sign({
+      header: { alg: 'HS256' },
+      payload: {
+        at: '2YotnFZFEjr1zCsicMWpAA'
+      },
+      secret: 'keyboard cat',
+    });
     
     chai.passport.use(strategy)
       .request(function(req) {
-        req.connection = {};
-        req.connection.encrypted = true;
-        req.url = '/protectedresource';
-        req.headers['host'] = 'resource.example.org';
-        //req.headers['authorization'] = 'PoP eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJhdCI6IjEyMzQ1NiIsInRzIjoxMjM0NTY3OH0.J6DUAy9TopLOfIJHFbY2BNDankWID9ZvJ-ylHoV_a6k';
-        req.headers['authorization'] = 'PoP eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdCI6IjEyMzQ1NiIsInRzIjoxMjM0NTY3OH0.Pocf1CzRha25nwCfoZynProYLcV1UE5SlcRGa3qzZXo';
+        req.headers['authorization'] = 'PoP ' + credential;
       })
       .success(function(user, info) {
         expect(user).to.deep.equal({ id: '248289761001' });
@@ -37,7 +39,7 @@ describe('Strategy', function() {
         done();
       })
       .authenticate();
-  });
+  }); // should authenticate request with valid credentials
   
   
 });
