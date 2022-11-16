@@ -95,6 +95,34 @@ describe('Strategy', function() {
       .authenticate();
   }); // should authenticate request with valid signature in URI query parameter
   
+  it('should challenge request without credential', function(done) {
+    var strategy = new Strategy(function(token, cb) {
+      throw new Error('verify function should not be called');
+    });
+    
+    chai.passport.use(strategy)
+      .fail(function(challenge, status) {
+        expect(challenge).to.equal('PoP');
+        expect(status).to.be.undefined;
+        done();
+      })
+      .authenticate();
+  });
+  
+  it('should challenge request without credential using realm option passed to constructor', function(done) {
+    var strategy = new Strategy({ realm: 'example' }, function(token, cb) {
+      throw new Error('verify function should not be called');
+    });
+    
+    chai.passport.use(strategy)
+      .fail(function(challenge, status) {
+        expect(challenge).to.equal('PoP realm="example"');
+        expect(status).to.be.undefined;
+        done();
+      })
+      .authenticate();
+  });
+  
   it('should refuse request with signature transmitted in both header field and form-encoded body parameter', function(done) {
     chai.passport.use(strategy)
       .request(function(req) {
