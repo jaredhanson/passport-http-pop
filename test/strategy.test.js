@@ -15,7 +15,7 @@ describe('Strategy', function() {
   
   // https://developers.commerce.campaignmonitor.com/#oauth
   
-  it('should authenticate request with valid credentials', function(done) {
+  it('should authenticate request with valid signature in header field', function(done) {
     var strategy = new Strategy(function(token, cb) {
       expect(token).to.equal('2YotnFZFEjr1zCsicMWpAA');
       return cb(null, { id: '248289761001' }, 'keyboard cat');
@@ -39,7 +39,61 @@ describe('Strategy', function() {
         done();
       })
       .authenticate();
-  }); // should authenticate request with valid credentials
+  }); // should authenticate request with valid signature in header field
+  
+  it('should authenticate request with valid signature in form-encoded body parameter', function(done) {
+    var strategy = new Strategy(function(token, cb) {
+      expect(token).to.equal('2YotnFZFEjr1zCsicMWpAA');
+      return cb(null, { id: '248289761001' }, 'keyboard cat');
+    });
+    
+    var credential = jws.sign({
+      header: { alg: 'HS256' },
+      payload: {
+        at: '2YotnFZFEjr1zCsicMWpAA'
+      },
+      secret: 'keyboard cat',
+    });
+    
+    chai.passport.use(strategy)
+      .request(function(req) {
+        req.body = {};
+        req.body.pop_access_token = credential;
+      })
+      .success(function(user, info) {
+        expect(user).to.deep.equal({ id: '248289761001' });
+        expect(info).to.be.undefined;
+        done();
+      })
+      .authenticate();
+  }); // should authenticate request with valid signature in header field
+  
+  it('should authenticate request with valid signature in URI query parameter', function(done) {
+    var strategy = new Strategy(function(token, cb) {
+      expect(token).to.equal('2YotnFZFEjr1zCsicMWpAA');
+      return cb(null, { id: '248289761001' }, 'keyboard cat');
+    });
+    
+    var credential = jws.sign({
+      header: { alg: 'HS256' },
+      payload: {
+        at: '2YotnFZFEjr1zCsicMWpAA'
+      },
+      secret: 'keyboard cat',
+    });
+    
+    chai.passport.use(strategy)
+      .request(function(req) {
+        req.query = {};
+        req.query.pop_access_token = credential;
+      })
+      .success(function(user, info) {
+        expect(user).to.deep.equal({ id: '248289761001' });
+        expect(info).to.be.undefined;
+        done();
+      })
+      .authenticate();
+  }); // should authenticate request with valid signature in URI query parameter
   
   it('should refuse request with signature transmitted in both header field and form-encoded body parameter', function(done) {
     chai.passport.use(strategy)
@@ -68,6 +122,5 @@ describe('Strategy', function() {
       })
       .authenticate();
   });
-  
   
 });
