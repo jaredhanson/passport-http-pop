@@ -64,7 +64,7 @@ describe('Strategy', function() {
         done();
       })
       .authenticate();
-  }); // should authenticate request with valid signature in header field
+  }); // should authenticate request with valid signature in form-encoded body parameter
   
   it('should authenticate request with valid signature in URI query parameter', function(done) {
     var strategy = new Strategy(function(token, cb) {
@@ -105,7 +105,111 @@ describe('Strategy', function() {
         done();
       })
       .authenticate();
-  });
+  }); // should challenge request without credential
+  
+  it('should challenge request with invalid signature', function(done) {
+    var strategy = new Strategy(function(token, cb) {
+      expect(token).to.equal('2YotnFZFEjr1zCsicMWpAA');
+      return cb(null, { id: '248289761001' }, 'keyboard cat');
+    });
+    
+    var credential = jws.sign({
+      header: { alg: 'HS256' },
+      payload: {
+        at: '2YotnFZFEjr1zCsicMWpAA'
+      },
+      secret: 'keyboard dog',
+    });
+    
+    chai.passport.use(strategy)
+      .request(function(req) {
+        req.headers['authorization'] = 'PoP ' + credential;
+      })
+      .fail(function(challenge, status) {
+        expect(challenge).to.equal('PoP error="invalid_token", error_description="Invalid signature"');
+        expect(status).to.be.undefined;
+        done();
+      })
+      .authenticate();
+  }); // should challenge request with invalid signature
+  
+  it('should challenge request when verify function yields without user', function(done) {
+    var strategy = new Strategy(function(token, cb) {
+      expect(token).to.equal('2YotnFZFEjr1zCsicMWpAA');
+      return cb(null, false);
+    });
+    
+    var credential = jws.sign({
+      header: { alg: 'HS256' },
+      payload: {
+        at: '2YotnFZFEjr1zCsicMWpAA'
+      },
+      secret: 'keyboard dog',
+    });
+    
+    chai.passport.use(strategy)
+      .request(function(req) {
+        req.headers['authorization'] = 'PoP ' + credential;
+      })
+      .fail(function(challenge, status) {
+        expect(challenge).to.equal('PoP error="invalid_token"');
+        expect(status).to.be.undefined;
+        done();
+      })
+      .authenticate();
+  }); // should challenge request when verify function yields without user
+  
+  it('should challenge request when verify function yields without user and includes explanation', function(done) {
+    var strategy = new Strategy(function(token, cb) {
+      expect(token).to.equal('2YotnFZFEjr1zCsicMWpAA');
+      return cb(null, false, { message: 'The access token expired' });
+    });
+    
+    var credential = jws.sign({
+      header: { alg: 'HS256' },
+      payload: {
+        at: '2YotnFZFEjr1zCsicMWpAA'
+      },
+      secret: 'keyboard dog',
+    });
+    
+    chai.passport.use(strategy)
+      .request(function(req) {
+        req.headers['authorization'] = 'PoP ' + credential;
+      })
+      .fail(function(challenge, status) {
+        expect(challenge).to.equal('PoP error="invalid_token", error_description="The access token expired"');
+        expect(status).to.be.undefined;
+        done();
+      })
+      .authenticate();
+  }); // should challenge request when verify function yields without user and includes explanation
+  
+  it('should challenge request when verify function yields without user and includes explanation as string', function(done) {
+    var strategy = new Strategy(function(token, cb) {
+      expect(token).to.equal('2YotnFZFEjr1zCsicMWpAA');
+      return cb(null, false, 'The access token expired');
+    });
+    
+    var credential = jws.sign({
+      header: { alg: 'HS256' },
+      payload: {
+        at: '2YotnFZFEjr1zCsicMWpAA'
+      },
+      secret: 'keyboard dog',
+    });
+    
+    chai.passport.use(strategy)
+      .request(function(req) {
+        req.headers['authorization'] = 'PoP ' + credential;
+      })
+      .fail(function(challenge, status) {
+        expect(challenge).to.equal('PoP error="invalid_token", error_description="The access token expired"');
+        expect(status).to.be.undefined;
+        done();
+      })
+      .authenticate();
+  }); // should challenge request when verify function yields without user and includes explanation as string
   
   it('should challenge request without credential using realm option passed to constructor', function(done) {
     var strategy = new Strategy({ realm: 'example' }, function(token, cb) {
