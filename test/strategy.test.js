@@ -133,6 +133,35 @@ describe('Strategy', function() {
       .authenticate();
   }); // should challenge request with invalid signature
   
+  it('should challenge request with non-matching HTTP method', function(done) {
+    var strategy = new Strategy(function(token, cb) {
+      expect(token).to.equal('2YotnFZFEjr1zCsicMWpAA');
+      return cb(null, { id: '248289761001' }, 'keyboard cat');
+    });
+    
+    var credential = jws.sign({
+      header: { alg: 'HS256' },
+      payload: {
+        at: '2YotnFZFEjr1zCsicMWpAA',
+        m: 'GET'
+      },
+      secret: 'keyboard dog',
+    });
+    
+    chai.passport.use(strategy)
+      .request(function(req) {
+        req.method = 'POST';
+        req.url = '/resource';
+        req.headers['authorization'] = 'PoP ' + credential;
+      })
+      .fail(function(challenge, status) {
+        expect(challenge).to.equal('PoP error="invalid_token", error_description="HTTP method does not signature"');
+        expect(status).to.be.undefined;
+        done();
+      })
+      .authenticate();
+  }); // should challenge request with invalid signature
+  
   it('should challenge request when verify function yields without user', function(done) {
     var strategy = new Strategy(function(token, cb) {
       expect(token).to.equal('2YotnFZFEjr1zCsicMWpAA');
